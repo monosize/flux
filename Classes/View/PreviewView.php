@@ -290,17 +290,34 @@ class PreviewView {
 	protected function drawGridColumn(array $row, Column $column) {
 		$colPosFluxContent = ContentService::COLPOS_FLUXCONTENT;
 
+		$columnName = $column->getName();
 		$dblist = $this->getInitializedPageLayoutView($row);
 		$this->configurePageLayoutViewForLanguageMode($dblist);
-		$records = $this->getRecords($dblist, $row, $column->getName());
+		$records = $this->getRecords($dblist, $row, $columnName);
 
 		$content = '';
 		foreach ($records as $record) {
 			$content .= $this->drawRecord($row, $column, $record, $dblist);
 		}
-
-		$id = 'colpos-' . $colPosFluxContent . '-page-' . $row['pid'] . '--top-' . $row['uid'] . '-' . $column->getName();
-		$target = $this->registerTargetContentAreaInSession($row['uid'], $column->getName());
+		// Add localize buttons for flux container elements
+		if (isset($row['l18n_parent']) && 0 < $row['l18n_parent']) {
+			if (TRUE === empty($dblist->defLangBinding)) {
+				$partialOriginalRecord = array('uid' => $row['l18n_parent'], 'pid' => $row['pid']);
+				$childrenInDefaultLanguage = $this->getRecords($dblist, $partialOriginalRecord, $columnName);
+				$childrenUids = array();
+				foreach ($childrenInDefaultLanguage as $child) {
+					$childrenUids[] = $child['uid'];
+				}
+				$langPointer = $row['sys_language_uid'];
+				$localizeButton = $dblist->newLanguageButton(
+					$dblist->getNonTranslatedTTcontentUids($childrenUids, $dblist->id, $langPointer),
+					$langPointer
+				);
+				$content .= $localizeButton;
+			}
+		}
+		$id = 'colpos-' . $colPosFluxContent . '-page-' . $row['pid'] . '--top-' . $row['uid'] . '-' . $columnName;
+		$target = $this->registerTargetContentAreaInSession($row['uid'], $columnName);
 
 		return $this->parseGridColumnTemplate($row, $column, $colPosFluxContent, $dblist, $target, $id, $content);
 	}
@@ -325,7 +342,6 @@ class PreviewView {
 			$this->drawNewIcon($parentRow, $column, $record['uid']) .
 			$this->drawPasteIcon($parentRow, $column, FALSE, $record) .
 			$this->drawPasteIcon($parentRow, $column, TRUE, $record));
-
 	}
 
 	/**
@@ -532,6 +548,7 @@ class PreviewView {
 	 */
 	protected function getInitializedPageLayoutView(array $row) {
 		$pageRecord = $this->workspacesAwareRecordService->getSingle('pages', '*', $row['pid']);
+		$moduleData = $GLOBALS['BE_USER']->getModuleData('web_layout', '');
 		/** @var $dblist PageLayoutView */
 		$dblist = GeneralUtility::makeInstance('TYPO3\CMS\Extbase\Object\ObjectManager')->get('TYPO3\CMS\Backend\View\PageLayoutView');
 		$dblist->backPath = $GLOBALS['BACK_PATH'];
@@ -549,7 +566,7 @@ class PreviewView {
 		$dblist->tt_contentConfig['showCommands'] = 1;
 		$dblist->tt_contentConfig['showInfo'] = 1;
 		$dblist->tt_contentConfig['single'] = 0;
-		$dblist->tt_contentConfig['showHidden'] = intval($GLOBALS['BE_USER']->uc['moduleData']['web_layout']['tt_content_showHidden']);
+		$dblist->tt_contentConfig['showHidden'] = intval($moduleData['tt_content_showHidden']);
 		$dblist->tt_contentConfig['activeCols'] .= ',' . ContentService::COLPOS_FLUXCONTENT;
 		$dblist->CType_labels = array();
 		$dblist->pidSelect = "pid = '" . $row['pid'] . "'";
