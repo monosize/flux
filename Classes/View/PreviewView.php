@@ -48,6 +48,8 @@ class PreviewView {
 	const PREVIEW_SECTION = 'Preview';
 	const CONTROLLER_NAME = 'Content';
 
+	const REGEX_BUTTON_DOWN = '/<a class="btn btn-default" href="([^"]+)"((?:(?!<a ).)*)data-identifier="actions-move-down">/is';
+	const REGEX_BUTTON_UP = '/<a class="btn btn-default" href="([^"]+)"((?:(?!<a ).)*)data-identifier="actions-move-up">/is';
 	/**
 	 * @var array
 	 */
@@ -299,8 +301,24 @@ class PreviewView {
 		$records = $this->getRecords($dblist, $row, $columnName);
 
 		$content = '';
+		$firstElement = '';
+		$secondElement = FALSE;
 		foreach ($records as $record) {
-			$content .= $this->drawRecord($row, $column, $record, $dblist);
+			$drawRecord = $this->drawRecord($row, $column, $record, $dblist);
+			if (TRUE === empty($firstElement)) {
+				$firstElement = $drawRecord;
+			} else {
+				if (FALSE === $secondElement) {
+					if ( 1 === preg_match(self::REGEX_BUTTON_DOWN, $firstElement, $buttonDown)) {
+						if (1 === preg_match(self::REGEX_BUTTON_UP, $drawRecord, $buttonUp)) {
+							$drawRecord = str_replace($buttonUp[1], $buttonDown[1], $drawRecord);
+						}
+					}
+					$firstElement = TRUE;
+					$secondElement = TRUE;
+				}
+			}
+			$content .= $drawRecord;
 		}
 		// Add localize buttons for flux container elements
 		if (isset($row['l18n_parent']) && 0 < $row['l18n_parent']) {
