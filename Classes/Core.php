@@ -367,16 +367,9 @@ class Core
             $templateFilename = GeneralUtility::getFileAbsFileName($templateFilename);
         }
 
-        // Determine which plugin name and controller action to emulate with this CType, base on file name.
-        $emulatedPluginName = ucfirst(pathinfo($templateFilename, PATHINFO_FILENAME));
-        $extensionSignature = str_replace('_', '', ExtensionNamingUtility::getExtensionKey($providerExtensionName));
-        $fullContentType = $extensionSignature . '_' . strtolower($emulatedPluginName);
-
-        static::$queuedContentTypeRegistrations[$fullContentType] = [
+        static::$queuedContentTypeRegistrations[] = [
             $providerExtensionName,
-            $fullContentType,
             $templateFilename,
-            $emulatedPluginName
         ];
     }
 
@@ -440,7 +433,7 @@ class Core
 
     /**
      * Gets the defined FlexForms configuration providers based on parameters
-     * @return array
+     * @return ProviderInterface[]
      */
     public static function getRegisteredFlexFormProviders()
     {
